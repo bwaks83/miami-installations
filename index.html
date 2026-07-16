@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Miami Installations Dashboard</title>
+<title>US Installations Dashboard</title>
 <style>
   :root{
     --bg:#0b0f14;--panel:#121922;--panel-2:#182331;--border:#243244;
@@ -26,7 +26,7 @@
   .hero{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:18px}
   .hero h2{margin:0;font-size:28px;letter-spacing:-.5px}.hero p{margin:6px 0 0;color:var(--muted);font-size:14px}
   .year-pill{padding:7px 11px;border:1px solid rgba(101,169,255,.3);border-radius:999px;background:rgba(101,169,255,.08);color:#a9d0ff;font-size:12px;white-space:nowrap}
-  .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+  .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
   .panel{border:1px solid var(--border);border-radius:14px;background:linear-gradient(150deg,rgba(24,35,49,.88),rgba(15,21,29,.96));box-shadow:0 12px 34px rgba(0,0,0,.12)}
   .kpi{min-height:132px;padding:18px;display:flex;flex-direction:column;justify-content:space-between}
   .kpi .label{color:var(--muted);font-size:11px;line-height:1.3;letter-spacing:.7px;text-transform:uppercase}
@@ -46,21 +46,20 @@
 </head>
 <body>
 <header>
-  <div class="brand"><div class="brand-mark">M</div><div><p class="eyebrow">Operations</p><h1>Miami Installations</h1></div></div>
+  <div class="brand"><div class="brand-mark">M</div><div><p class="eyebrow">Operations</p><h1>US Installations</h1></div></div>
   <div class="meta"><span id="updated">Loading…</span><button id="refreshBtn">Refresh</button></div>
 </header>
 <main>
   <div id="errorBox"></div>
-  <section class="hero"><div><p class="eyebrow">Installation performance</p><h2>Installation overview</h2><p>Completed work, scheduled visits and installation revenue in one place.</p></div><div class="year-pill" id="yearPill">Current year</div></section>
+  <section class="hero"><div><p class="eyebrow">Installation performance</p><h2>Installation overview</h2><p>Does not include Orlando's installations.</p></div><div class="year-pill" id="yearPill">Current year</div></section>
   <section class="kpis">
     <article class="panel kpi"><div class="label">Diffusers installed this month</div><div class="value" id="kpiMonth">—</div><div class="sub" id="kpiMonthSub"></div></article>
     <article class="panel kpi"><div class="label">Diffusers installed this year</div><div class="value" id="kpiDone">—</div><div class="sub" id="kpiDoneSub"></div></article>
     <article class="panel kpi"><div class="label">Scheduled diffusers Installations</div><div class="value" id="kpiScheduledDiffusers">—</div><div class="sub">through year's end</div></article>
-    <article class="panel kpi"><div class="label">Projected Installation revenue</div><div class="value" id="kpiRevenue">—</div><div class="sub" id="kpiRevenueSub"></div></article>
   </section>
   <section class="content">
-    <article class="panel table-panel"><div class="panel-head"><div><h3>Scheduled installations</h3><p>Upcoming visits ordered by date</p></div><div class="count" id="scheduleCount"></div></div><div class="table-wrap"><table><thead><tr><th>Client</th><th>Date</th><th class="num">Diffusers</th><th>Status</th><th class="num">Value</th></tr></thead><tbody id="scheduleBody"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody></table></div></article>
-    <article class="panel table-panel"><div class="panel-head"><div><h3>Monthly installations</h3><p>Completed diffusers in the current year</p></div></div><div class="months" id="monthBars"><div class="empty">Loading…</div></div></article>
+    <article class="panel table-panel"><div class="panel-head"><div><h3>Scheduled installations</h3><p>Upcoming visits ordered by date</p></div><div class="count" id="scheduleCount"></div></div><div class="table-wrap"><table><thead><tr><th>Client</th><th>Date</th><th class="num">Diffusers</th><th>Status</th></tr></thead><tbody id="scheduleBody"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody></table></div></article>
+    <article class="panel table-panel"><div class="panel-head"><div><h3>Monthly installations</h3><p>Completed installations in the current year</p></div></div><div class="months" id="monthBars"><div class="empty">Loading…</div></div></article>
   </section>
   <p class="footnote">Data source: Installations table · A record is considered completed when Notes contains “done”.</p>
 </main>
@@ -71,13 +70,12 @@ const CONFIG={
   CURRENCY:"USD",LOCALE:"en-US",DATE_LOCALE:"en-US",AUTO_REFRESH_MIN:10
 };
 const fmtNum=n=>new Intl.NumberFormat(CONFIG.DATE_LOCALE).format(n||0);
-const fmtMoney=n=>new Intl.NumberFormat(CONFIG.LOCALE,{style:"currency",currency:CONFIG.CURRENCY,maximumFractionDigits:0}).format(n||0);
 const fmtDate=iso=>iso?new Date(iso+"T00:00:00").toLocaleDateString(CONFIG.DATE_LOCALE,{day:"2-digit",month:"short",year:"numeric"}):"—";
 const parseNumber=value=>{if(typeof value==="number")return value;if(typeof value==="string"){const n=Number(value.replace(/[^0-9.-]+/g,""));return Number.isNaN(n)?0:n}return 0};
 const escapeHtml=s=>String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const isDone=r=>(r.fields.Notes||"").toLowerCase().includes("done");
 async function fetchInstallations(){
-  const url=new URL(`https://api.airtable.com/v0/${CONFIG.BASE_ID}/${CONFIG.TABLE_INSTALLS}`);["Name","Date","Diffusers","Notes","Value"].forEach(f=>url.searchParams.append("fields[]",f));
+  const url=new URL(`https://api.airtable.com/v0/${CONFIG.BASE_ID}/${CONFIG.TABLE_INSTALLS}`);["Name","Date","Diffusers","Notes"].forEach(f=>url.searchParams.append("fields[]",f));
   const records=[];let offset;do{if(offset)url.searchParams.set("offset",offset);const res=await fetch(url,{headers:{Authorization:`Bearer ${CONFIG.AIRTABLE_TOKEN}`}});if(!res.ok)throw new Error(`Airtable: ${res.status} ${res.statusText}`);const data=await res.json();records.push(...data.records);offset=data.offset}while(offset);return records;
 }
 function compute(records){
@@ -88,19 +86,17 @@ function compute(records){
   const prevDiffusers=completed.filter(r=>{const d=new Date(r.fields.Date+"T00:00:00");return d>=prevMonth&&d<monthStart}).reduce((s,r)=>s+parseNumber(r.fields.Diffusers),0);
   const upcoming=records.filter(r=>r.fields.Date&&!isDone(r)&&new Date(r.fields.Date+"T00:00:00")>=today).sort((a,b)=>a.fields.Date.localeCompare(b.fields.Date));
   const scheduledDiffusers=upcoming.reduce((s,r)=>s+parseNumber(r.fields.Diffusers),0);
-  const revenueRecords=records.filter(r=>r.fields.Date&&new Date(r.fields.Date+"T00:00:00").getFullYear()===year&&parseNumber(r.fields.Value)>0);
-  const revenue=revenueRecords.reduce((s,r)=>s+parseNumber(r.fields.Value),0);
   const months=Array.from({length:12},(_,i)=>({name:new Date(year,i,1).toLocaleDateString(CONFIG.DATE_LOCALE,{month:"short"}),value:0}));doneYear.forEach(r=>months[new Date(r.fields.Date+"T00:00:00").getMonth()].value+=parseNumber(r.fields.Diffusers));
-  return{year,doneYear,monthDiffusers,prevDiffusers,upcoming,scheduledDiffusers,revenue,revenueCount:revenueRecords.length,months};
+  return{year,doneYear,monthDiffusers,prevDiffusers,upcoming,scheduledDiffusers,months};
 }
 function render(k){
   document.getElementById("yearPill").textContent=k.year;document.getElementById("kpiMonth").textContent=fmtNum(k.monthDiffusers);
   const delta=k.monthDiffusers-k.prevDiffusers,pct=k.prevDiffusers?delta/k.prevDiffusers*100:(k.monthDiffusers?100:0),cls=delta>0?"up":delta<0?"down":"flat",arrow=delta>0?"▲":delta<0?"▼":"▬";
   document.getElementById("kpiMonthSub").innerHTML=`<span class="${cls}">${arrow} ${delta>=0?"+":""}${fmtNum(delta)} (${pct.toFixed(0)}%)</span> vs last month`;
   document.getElementById("kpiDone").textContent=fmtNum(k.doneYear.reduce((s,r)=>s+parseNumber(r.fields.Diffusers),0));document.getElementById("kpiDoneSub").textContent=`${fmtNum(k.doneYear.length)} completed installations`;
-  document.getElementById("kpiScheduledDiffusers").textContent=fmtNum(k.scheduledDiffusers);document.getElementById("kpiRevenue").textContent=fmtMoney(k.revenue);document.getElementById("kpiRevenueSub").textContent=`${fmtNum(k.revenueCount)} installations with value`;
+  document.getElementById("kpiScheduledDiffusers").textContent=fmtNum(k.scheduledDiffusers);
   document.getElementById("scheduleCount").textContent=`${fmtNum(k.upcoming.length)} upcoming`;
-  document.getElementById("scheduleBody").innerHTML=k.upcoming.length?k.upcoming.map(r=>`<tr><td>${escapeHtml(r.fields.Name||"—")}</td><td class="date">${fmtDate(r.fields.Date)}</td><td class="num">${fmtNum(parseNumber(r.fields.Diffusers))}</td><td><span class="badge">${escapeHtml((r.fields.Notes||"").trim()||"Scheduled")}</span></td><td class="num">${parseNumber(r.fields.Value)?fmtMoney(parseNumber(r.fields.Value)):"—"}</td></tr>`).join(""):`<tr><td colspan="5" class="empty">No scheduled installations.</td></tr>`;
+  document.getElementById("scheduleBody").innerHTML=k.upcoming.length?k.upcoming.map(r=>`<tr><td>${escapeHtml(r.fields.Name||"—")}</td><td class="date">${fmtDate(r.fields.Date)}</td><td class="num">${fmtNum(parseNumber(r.fields.Diffusers))}</td><td><span class="badge">${escapeHtml((r.fields.Notes||"").trim()||"Scheduled")}</span></td></tr>`).join(""):`<tr><td colspan="4" class="empty">No scheduled installations.</td></tr>`;
   const max=Math.max(...k.months.map(m=>m.value),1);document.getElementById("monthBars").innerHTML=k.months.map(m=>`<div class="month"><div class="month-top"><span class="month-name">${m.name}</span><span class="month-total">${fmtNum(m.value)} diffusers</span></div><div class="bar"><span style="width:${m.value/max*100}%"></span></div></div>`).join("");
   document.getElementById("updated").textContent="Updated "+new Date().toLocaleTimeString(CONFIG.DATE_LOCALE);
 }
