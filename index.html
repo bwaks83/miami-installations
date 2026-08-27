@@ -35,7 +35,7 @@
   .miami-group{border:1px solid rgba(101,169,255,.38);background:linear-gradient(145deg,rgba(101,169,255,.055),rgba(15,21,29,.82))}
   .miami-group .city-name{color:#91c2ff}
   .city-cards{display:grid;flex:1;gap:11px}
-  .miami-cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .miami-cards{grid-template-columns:repeat(4,minmax(0,1fr))}
   .orlando-cards{grid-template-columns:1fr}
   .panel{border:1px solid var(--border);border-radius:14px;background:linear-gradient(150deg,rgba(24,35,49,.88),rgba(15,21,29,.96));box-shadow:0 12px 34px rgba(0,0,0,.12)}
   .kpi{min-height:140px;padding:18px 19px 16px;display:grid;grid-template-rows:auto 1fr auto;align-items:start;justify-items:center;text-align:center}
@@ -82,7 +82,8 @@
       <div class="city-cards miami-cards">
         <article class="panel kpi miami-card"><div class="metric-heading"><span class="metric-type">Diffusers</span><span class="metric-title">Installed this month</span></div><div class="value" id="kpiMonth">—</div><div class="sub" id="kpiMonthSub"></div></article>
         <article class="panel kpi miami-card"><div class="metric-heading"><span class="metric-type">Diffusers</span><span class="metric-title">Installed this year</span></div><div class="value" id="kpiDone">—</div><div class="sub" id="kpiDoneSub"></div></article>
-        <article class="panel kpi miami-card"><div class="metric-heading"><span class="metric-type">Installations</span><span class="metric-title">Scheduled installations</span></div><div class="value" id="kpiScheduledDiffusers">—</div><div class="sub">through year's end</div></article>
+        <article class="panel kpi miami-card"><div class="metric-heading"><span class="metric-type">Installations</span><span class="metric-title">Scheduled installations 2026</span></div><div class="value" id="kpiScheduledDiffusers2026">—</div><div class="sub">2026 dates only</div></article>
+        <article class="panel kpi miami-card"><div class="metric-heading"><span class="metric-type">Installations</span><span class="metric-title">Scheduled installations 2027</span></div><div class="value" id="kpiScheduledDiffusers2027">—</div><div class="sub">2027 dates only</div></article>
       </div>
     </div>
     <div class="city-group orlando-group">
@@ -119,17 +120,20 @@ function compute(records){
   const completed=records.filter(r=>isDone(r)&&r.fields.Date);const doneYear=completed.filter(r=>new Date(r.fields.Date+"T00:00:00").getFullYear()===year);
   const monthDiffusers=completed.filter(r=>{const d=new Date(r.fields.Date+"T00:00:00");return d>=monthStart&&d<nextMonth}).reduce((s,r)=>s+parseNumber(r.fields.Diffusers),0);
   const prevDiffusers=completed.filter(r=>{const d=new Date(r.fields.Date+"T00:00:00");return d>=prevMonth&&d<monthStart}).reduce((s,r)=>s+parseNumber(r.fields.Diffusers),0);
-  const upcoming=records.filter(r=>r.fields.Date&&!isDone(r)&&new Date(r.fields.Date+"T00:00:00")>=today).sort((a,b)=>a.fields.Date.localeCompare(b.fields.Date));
-  const scheduledDiffusers=upcoming.reduce((s,r)=>s+parseNumber(r.fields.Diffusers),0);
+  const scheduled=records.filter(r=>r.fields.Date&&!isDone(r));
+  const upcoming=scheduled.filter(r=>new Date(r.fields.Date+"T00:00:00")>=today).sort((a,b)=>a.fields.Date.localeCompare(b.fields.Date));
+  const scheduledDiffusers2026=scheduled.filter(r=>new Date(r.fields.Date+"T00:00:00").getFullYear()===2026).reduce((s,r)=>s+parseNumber(r.fields.Diffusers),0);
+  const scheduledDiffusers2027=scheduled.filter(r=>new Date(r.fields.Date+"T00:00:00").getFullYear()===2027).reduce((s,r)=>s+parseNumber(r.fields.Diffusers),0);
   const months=Array.from({length:12},(_,i)=>({name:new Date(year,i,1).toLocaleDateString(CONFIG.DATE_LOCALE,{month:"short"}),value:0}));doneYear.forEach(r=>months[new Date(r.fields.Date+"T00:00:00").getMonth()].value+=parseNumber(r.fields.Diffusers));
-  return{year,doneYear,monthDiffusers,prevDiffusers,upcoming,scheduledDiffusers,months};
+  return{year,doneYear,monthDiffusers,prevDiffusers,upcoming,scheduledDiffusers2026,scheduledDiffusers2027,months};
 }
 function render(k){
   document.getElementById("yearPill").textContent=k.year;document.getElementById("kpiMonth").textContent=fmtNum(k.monthDiffusers);
   const delta=k.monthDiffusers-k.prevDiffusers,pct=k.prevDiffusers?delta/k.prevDiffusers*100:(k.monthDiffusers?100:0),cls=delta>0?"up":delta<0?"down":"flat",arrow=delta>0?"▲":delta<0?"▼":"▬";
   document.getElementById("kpiMonthSub").innerHTML=`<span class="${cls}">${arrow} ${delta>=0?"+":""}${fmtNum(delta)} (${pct.toFixed(0)}%)</span> vs last month`;
   document.getElementById("kpiDone").textContent=fmtNum(k.doneYear.reduce((s,r)=>s+parseNumber(r.fields.Diffusers),0));document.getElementById("kpiDoneSub").textContent=`${fmtNum(k.doneYear.length)} completed installations`;
-  document.getElementById("kpiScheduledDiffusers").textContent=fmtNum(k.scheduledDiffusers);
+  document.getElementById("kpiScheduledDiffusers2026").textContent=fmtNum(k.scheduledDiffusers2026);
+  document.getElementById("kpiScheduledDiffusers2027").textContent=fmtNum(k.scheduledDiffusers2027);
   document.getElementById("scheduleCount").textContent=`${fmtNum(k.upcoming.length)} upcoming`;
   document.getElementById("scheduleBody").innerHTML=k.upcoming.length?k.upcoming.map(r=>`<tr><td>${escapeHtml(r.fields.Name||"—")}</td><td class="date">${fmtDate(r.fields.Date)}</td><td class="num">${fmtNum(parseNumber(r.fields.Diffusers))}</td><td><span class="badge">${escapeHtml((r.fields.Notes||"").trim()||"Scheduled")}</span></td></tr>`).join(""):`<tr><td colspan="4" class="empty">No scheduled installations.</td></tr>`;
   const max=Math.max(...k.months.map(m=>m.value),1);document.getElementById("monthBars").innerHTML=k.months.map(m=>`<div class="month"><div class="month-top"><span class="month-name">${m.name}</span><span class="month-total">${fmtNum(m.value)} diffusers</span></div><div class="bar"><span style="width:${m.value/max*100}%"></span></div></div>`).join("");
